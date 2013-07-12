@@ -10,7 +10,7 @@
 uint8_t A = 0; /* accumulator register */
 uint8_t X = 0; /* index X register */
 uint8_t Y = 0; /* index Y register */
-uint8_t SR = 0x20; /* status register 00100000 */
+uint8_t SR = 0x24; /* status register 00100000 */
 uint16_t SP = 0x01FF; /* stack pointer to the low byte of the stack */
 uint16_t PC = 0xC000; /* program counter */
 
@@ -25,11 +25,13 @@ uint16_t pixelMap = 0x0200;
  */
 uint16_t readTwoBytes() {
 	uint16_t result = *(uint16_t *) (memory + PC);
+	printf("%x ", result);
 	PC += 2;
 	return result;
 }
 uint8_t readByte() {
 	uint8_t result = memory[PC];
+	printf("%x ", result);
 	PC++;
 	return result;
 }
@@ -517,12 +519,12 @@ void run(char* filename) {
 		return;
 	}
 
+	fseek(file, 16, SEEK_SET);
+
 	// load memory with file
 	int startPC = PC;
-	int byte = fgetc(file);
-	while (byte != EOF) {
-		memory[startPC++] = byte;
-		byte = fgetc(file);
+	for (int i = 0; i < 16384; i++) {
+		memory[startPC++] = fgetc(file);
 	}
 
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -530,19 +532,22 @@ void run(char* filename) {
 	SDL_Surface* screen = SDL_SetVideoMode(256, 256, 8, SDL_SWSURFACE);
 	SDL_WM_SetCaption("6502 Emulator", NULL);
 
-	int done = 0;
-	dump();
+
 	SDL_Event event;
 	int rate = 200;
+	int done = 0;
 	while (!done) {
 
+		printf("PC: %x\t\t", PC);
 		uint8_t ins = readByte();
+
 		done = processIns(ins);
+		dump();
 		if (rate-- == 0) {
 			drawRects(screen, screen->w / 32);
 			rate = 200;
 		}
-		dump();
+
 
 		SDL_PollEvent(&event);
 		switch (event.type) {
@@ -1598,8 +1603,8 @@ void adcIndY(uint8_t address) {
  ============================================================================
  */
 void nop() {
-	PC++;
 }
+
 void pha() {
 	memory[SP--] = A;
 }
@@ -1751,8 +1756,7 @@ void bvs(int8_t displacement) {
  */
 void dump() {
 
-	printf("PC: %x\t\t\t", PC);
-	printf("A: %x ", A);
+	printf("\t\tA: %x ", A);
 	printf("X: %x ", X);
 	printf("Y: %x ", Y);
 	printf("P: %x ", SR);
