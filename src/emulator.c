@@ -13,6 +13,6 @@
 
 int main(int argc, char *argv[]) {
 
-	run("scene.obj");
+	run("nestest.obj");
 	return 0;
 }
