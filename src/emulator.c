@@ -13,6 +13,6 @@
 
 int main(int argc, char *argv[]) {
 
-	run("demo.obj");
+	run_6502("adventure.obj");
 	return 0;
 }

@@ -4,15 +4,14 @@
  *  Created on: Jun 17, 2013
  *      Author: n0210015
  */
+#ifndef CPU_H_
+#define CPU_H_
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <SDL/SDL.h>
-
-#ifndef CPU_H_
-#define CPU_H_
 
 #define CARRY_FLAG 0x01
 #define ZERO_FLAG 0x02
@@ -40,7 +39,8 @@ extern uint16_t pixelMap;
  Main
  ============================================================================
  */
-void run();
+void run_6502();
+void run_nes();
 /*
  ============================================================================
  Interrupts
@@ -231,6 +231,7 @@ void cmpXAbs(uint16_t address);
  Compare
  ============================================================================
  */
+void compare(uint8_t A, uint8_t address);
 void cmp(uint8_t address);
 void cmpZero(uint8_t address);
 void cmpZeroX(uint8_t address);
