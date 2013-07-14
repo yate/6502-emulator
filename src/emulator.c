@@ -13,6 +13,6 @@
 
 int main(int argc, char *argv[]) {
 
-	run("nestest.nes");
+	run("demo.obj");
 	return 0;
 }

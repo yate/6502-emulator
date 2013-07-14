@@ -12,7 +12,7 @@ uint8_t X = 0; /* index X register */
 uint8_t Y = 0; /* index Y register */
 uint8_t SR = 0x24; /* status register 00100000 */
 uint16_t SP = 0x01FF; /* stack pointer to the low byte of the stack */
-uint16_t PC = 0xC000; /* program counter */
+uint16_t PC = 0x0600; /* program counter */
 
 uint8_t memory[0x10000];
 
@@ -25,13 +25,11 @@ uint16_t pixelMap = 0x0200;
  */
 uint16_t readTwoBytes() {
 	uint16_t result = *(uint16_t *) (memory + PC);
-	printf("%x ", result);
 	PC += 2;
 	return result;
 }
 uint8_t readByte() {
 	uint8_t result = memory[PC];
-	printf("%x ", result);
 	PC++;
 	return result;
 }
@@ -40,37 +38,43 @@ int processIns(uint8_t ins) {
 
 	int done = 0;
 	switch (ins) {
-	case 0x0:
+	case 0x00:
 		brk();
 		printf("BREAK: done...\n");
 		done = 1;
 		break;
-	case 0x1:
+	case 0x01:
 		oraIndX(readByte());
 		break;
 	case 0x03:
 		printf("done...\n");
 		done = 1;
 		break;
-	case 0x5:
+	case 0x04:
+		nopZero(readByte());
+		break;
+	case 0x05:
 		oraZero(readByte());
 		break;
-	case 0x6:
+	case 0x06:
 		aslZero(readByte());
 		break;
-	case 0x8:
+	case 0x08:
 		php();
 		break;
-	case 0x9:
+	case 0x09:
 		ora(readByte());
 		break;
-	case 0xA:
+	case 0x0A:
 		asl();
 		break;
-	case 0xD:
+	case 0x0C:
+		nopAbs(readTwoBytes());
+		break;
+	case 0x0D:
 		oraAbs(readTwoBytes());
 		break;
-	case 0xE:
+	case 0x0E:
 		aslAbs(readTwoBytes());
 		break;
 	case 0x10:
@@ -78,6 +82,9 @@ int processIns(uint8_t ins) {
 		break;
 	case 0x11:
 		oraIndY(readByte());
+		break;
+	case 0x14:
+		nopZeroX(readByte());
 		break;
 	case 0x15:
 		oraZeroX(readByte());
@@ -90,6 +97,12 @@ int processIns(uint8_t ins) {
 		break;
 	case 0x19:
 		oraAbsY(readTwoBytes());
+		break;
+	case 0x1A:
+		nop();
+		break;
+	case 0x1C:
+		nopAbsX(readTwoBytes());
 		break;
 	case 0x1D:
 		oraAbsX(readTwoBytes());
@@ -136,6 +149,9 @@ int processIns(uint8_t ins) {
 	case 0x31:
 		andIndY(readByte());
 		break;
+	case 0x34:
+		nopZeroX(readByte());
+		break;
 	case 0x35:
 		andZeroX(readByte());
 		break;
@@ -148,8 +164,14 @@ int processIns(uint8_t ins) {
 	case 0x39:
 		andAbsY(readTwoBytes());
 		break;
+	case 0x3A:
+		nop();
+		break;
+	case 0x3C:
+		nopAbsX(readTwoBytes());
+		break;
 	case 0x3D:
-		andAbsY(readTwoBytes());
+		andAbsX(readTwoBytes());
 		break;
 	case 0x3E:
 		rolAbsX(readTwoBytes());
@@ -159,6 +181,9 @@ int processIns(uint8_t ins) {
 		break;
 	case 0x41:
 		eorIndX(readByte());
+		break;
+	case 0x44:
+		nopZero(readByte());
 		break;
 	case 0x45:
 		eorZero(readByte());
@@ -190,6 +215,9 @@ int processIns(uint8_t ins) {
 	case 0x51:
 		eorIndY(readByte());
 		break;
+	case 0x54:
+		nopZeroX(readByte());
+		break;
 	case 0x55:
 		eorZeroX(readByte());
 		break;
@@ -202,6 +230,12 @@ int processIns(uint8_t ins) {
 	case 0x59:
 		eorAbsY(readTwoBytes());
 		break;
+	case 0x5A:
+		nop();
+		break;
+	case 0x5C:
+		nopAbsX(readTwoBytes());
+		break;
 	case 0x5D:
 		eorAbsX(readTwoBytes());
 		break;
@@ -213,6 +247,9 @@ int processIns(uint8_t ins) {
 		break;
 	case 0x61:
 		adcIndX(readByte());
+		break;
+	case 0x64:
+		nopZero(readByte());
 		break;
 	case 0x65:
 		adcZero(readByte());
@@ -244,6 +281,9 @@ int processIns(uint8_t ins) {
 	case 0x71:
 		adcIndY(readByte());
 		break;
+	case 0x74:
+		nopZeroX(readByte());
+		break;
 	case 0x75:
 		adcZeroX(readByte());
 		break;
@@ -256,14 +296,26 @@ int processIns(uint8_t ins) {
 	case 0x79:
 		adcAbsY(readTwoBytes());
 		break;
+	case 0x7A:
+		nop();
+		break;
+	case 0x7C:
+		nopAbsX(readTwoBytes());
+		break;
 	case 0x7D:
 		adcAbsX(readTwoBytes());
 		break;
 	case 0x7E:
 		rorAbsX(readTwoBytes());
 		break;
+	case 0x80:
+		nopImm(readByte());
+		break;
 	case 0x81:
 		staIndX(readByte());
+		break;
+	case 0x82:
+		nopImm(readByte());
 		break;
 	case 0x84:
 		styZero(readByte());
@@ -276,6 +328,9 @@ int processIns(uint8_t ins) {
 		break;
 	case 0x88:
 		dey();
+		break;
+	case 0x89:
+		nopImm(readByte());
 		break;
 	case 0x8A:
 		txa();
@@ -391,6 +446,9 @@ int processIns(uint8_t ins) {
 	case 0xC1:
 		cmpIndX(readByte());
 		break;
+	case 0xC3:
+		nopImm(readByte());
+		break;
 	case 0xC4:
 		cmpYZero(readByte());
 		break;
@@ -424,6 +482,9 @@ int processIns(uint8_t ins) {
 	case 0xD1:
 		cmpIndY(readByte());
 		break;
+	case 0xD4:
+		nopZeroX(readByte());
+		break;
 	case 0xD5:
 		cmpZeroX(readByte());
 		break;
@@ -436,6 +497,12 @@ int processIns(uint8_t ins) {
 	case 0xD9:
 		cmpAbsY(readTwoBytes());
 		break;
+	case 0xDA:
+		nop();
+		break;
+	case 0xDC:
+		nopAbsX(readTwoBytes());
+		break;
 	case 0xDD:
 		cmpAbsX(readTwoBytes());
 		break;
@@ -447,6 +514,9 @@ int processIns(uint8_t ins) {
 		break;
 	case 0xE1:
 		sbcIndX(readByte());
+		break;
+	case 0xE3:
+		nopImm(readByte());
 		break;
 	case 0xE4:
 		cmpXZero(readByte());
@@ -481,6 +551,9 @@ int processIns(uint8_t ins) {
 	case 0xF1:
 		sbcIndY(readByte());
 		break;
+	case 0xF4:
+		nopZeroX(readByte());
+		break;
 	case 0xF5:
 		sbcZeroX(readByte());
 		break;
@@ -492,6 +565,12 @@ int processIns(uint8_t ins) {
 		break;
 	case 0xF9:
 		sbcAbsY(readTwoBytes());
+		break;
+	case 0xFA:
+		nop();
+		break;
+	case 0xFC:
+		nopAbsX(readTwoBytes());
 		break;
 	case 0xFD:
 		sbcAbsX(readTwoBytes());
@@ -519,12 +598,12 @@ void run(char* filename) {
 		return;
 	}
 
-	fseek(file, 16, SEEK_SET);
-
 	// load memory with file
 	int startPC = PC;
-	for (int i = 0; i < 16384; i++) {
-		memory[startPC++] = fgetc(file);
+	int byte = fgetc(file);
+	while (byte != EOF) {
+		memory[startPC++] = byte;
+		byte = fgetc(file);
 	}
 
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -532,25 +611,26 @@ void run(char* filename) {
 	SDL_Surface* screen = SDL_SetVideoMode(256, 256, 8, SDL_SWSURFACE);
 	SDL_WM_SetCaption("6502 Emulator", NULL);
 
-
 	SDL_Event event;
 	int rate = 200;
 	int done = 0;
 	while (!done) {
-
-		printf("PC: %x\t\t", PC);
+		memory[0xFE] = rand() % 256;
 		uint8_t ins = readByte();
-
-		done = processIns(ins);
+		printf("%.2X  ", ins);
 		dump();
+		done = processIns(ins);
+
 		if (rate-- == 0) {
 			drawRects(screen, screen->w / 32);
 			rate = 200;
 		}
 
-
 		SDL_PollEvent(&event);
 		switch (event.type) {
+		case SDL_KEYDOWN:
+			memory[0xFF] = event.key.keysym.unicode;
+			break;
 		case SDL_QUIT:
 			SDL_Quit();
 			return;
@@ -709,9 +789,16 @@ void drawPixel(SDL_Surface* screen) {
  ============================================================================
  */
 void rti() {
-	SR = memory[++SP]; // set SR to previous stack value
-	SP += 2;
-	PC = *(uint16_t *) (memory + SP); // set PC to previous stack value
+	// set status registers
+	SP++;
+	SR = memory[SP];
+	SR = SR | 0x20;
+
+	// set program counter
+	SP++;
+	PC = memory[SP] & 0xFF;
+	SP++;
+	PC = PC | (memory[SP] << 8);
 }
 /*
  ============================================================================
@@ -719,13 +806,24 @@ void rti() {
  ============================================================================
  */
 void jsrAbs(uint16_t address) {
-	*(uint16_t *) (memory + SP) = PC; // store PC on the stack
-	SP -= 2; // next free spot on the stack is 2 bytes down
-	PC = address; // set PC to current address
+
+	PC--;
+	uint8_t highPC = (PC >> 8) & 0xFF;
+	uint8_t lowPC = PC & 0xFF;
+
+	memory[SP] = highPC;
+	SP--;
+	memory[SP] = lowPC;
+	SP--;
+
+	PC = address;
 }
 void rts() {
-	SP += 2;
-	PC = *(uint16_t *) (memory + SP); // set PC to previous stack value
+	SP++;
+	PC = memory[SP] & 0xFF;
+	SP++;
+	PC = PC | (memory[SP] << 8);
+	PC++;
 }
 /*
  ============================================================================
@@ -770,10 +868,10 @@ void staAbs(uint16_t address) {
 	memory[address] = A;
 }
 void staAbsX(uint16_t address) {
-	memory[address + X] = A;
+	memory[(address + X) & 0xFFFF] = A;
 }
 void staAbsY(uint16_t address) {
-	memory[address + Y] = A;
+	memory[(address + Y) & 0xFFFF] = A;
 }
 void staIndX(uint8_t address) {
 	uint16_t newAddress = indXAddress(address);
@@ -804,7 +902,7 @@ void setSbcFlags(uint8_t A, uint8_t B, uint8_t result) {
 	else
 		SR = SR & (~SIGN_FLAG);
 
-	setOverflow(A, B, result);
+	setSbcOverflow(A, B, result);
 }
 
 /* one byte address for immediate mode */
@@ -834,14 +932,14 @@ void sbcAbs(uint16_t address) {
 /* two byte absolute address + X */
 void sbcAbsX(uint16_t address) {
 	uint8_t oldA = A;
-	A = A - memory[address + X] - (1 - (SR & CARRY_FLAG));
-	setSbcFlags(oldA, memory[address + X], A);
+	A = A - memory[(address + X) & 0xFFFF] - (1 - (SR & CARRY_FLAG));
+	setSbcFlags(oldA, memory[(address + X) & 0xFFFF], A);
 }
 /* two byte absolute address + Y */
 void sbcAbsY(uint16_t address) {
 	uint8_t oldA = A;
-	A = A + memory[address + Y] - (1 - (SR & CARRY_FLAG));
-	setSbcFlags(oldA, memory[address + Y], A);
+	A = A - memory[(address + Y) & 0xFFFF] - (1 - (SR & CARRY_FLAG));
+	setSbcFlags(oldA, memory[(address + Y) & 0xFFFF], A);
 }
 /* one byte indirect address + X with zero page wrap around */
 void sbcIndX(uint8_t address) {
@@ -892,11 +990,12 @@ void rorAbs(uint16_t address) {
 	setZeroSignFlags(memory[address]);
 }
 void rorAbsX(uint16_t address) {
-	uint8_t oldMem = memory[address + X];
-	memory[address + X] = memory[address + X] >> 1;
-	memory[address + X] = memory[address + X] | ((SR & CARRY_FLAG) << 7);
+	uint8_t oldMem = memory[(address + X) & 0xFFFF];
+	memory[(address + X) & 0xFFFF] = memory[(address + X) & 0xFFFF] >> 1;
+	memory[(address + X) & 0xFFFF] = memory[(address + X) & 0xFFFF]
+			| ((SR & CARRY_FLAG) << 7);
 	SR = SR | (oldMem & CARRY_FLAG);
-	setZeroSignFlags(memory[address + X]);
+	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
 }
 /*
  ============================================================================
@@ -933,11 +1032,12 @@ void rolAbs(uint16_t address) {
 	setZeroSignFlags(memory[address]);
 }
 void rolAbsX(uint16_t address) {
-	uint8_t oldMem = memory[address + X];
-	memory[address + X] = memory[address + X] << 1;
-	memory[address + X] = memory[address + X] | (SR & CARRY_FLAG);
+	uint8_t oldMem = memory[(address + X) & 0xFFFF];
+	memory[(address + X) & 0xFFFF] = memory[(address + X) & 0xFFFF] << 1;
+	memory[(address + X) & 0xFFFF] = memory[(address + X) & 0xFFFF]
+			| (SR & CARRY_FLAG);
 	SR = SR | ((oldMem & SIGN_FLAG) >> 7);
-	setZeroSignFlags(memory[address + X]);
+	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
 }
 /*
  ============================================================================
@@ -961,11 +1061,11 @@ void oraAbs(uint16_t address) {
 	setZeroSignFlags(A);
 }
 void oraAbsX(uint16_t address) {
-	A = A | memory[address + X];
+	A = A | memory[(address + X) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void oraAbsY(uint16_t address) {
-	A = A | memory[address + Y];
+	A = A | memory[(address + Y) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void oraIndX(uint8_t address) {
@@ -980,34 +1080,58 @@ void oraIndY(uint8_t address) {
 }
 /*
  ============================================================================
- Arithmetic shift left
+ Logical shift right
  ============================================================================
  */
 void lsr() {
 	// set the carry flag to whatever was in bit 7 of A
-	SR = SR | (A & CARRY_FLAG);
+	if (A & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
 	A = A >> 1;
 	setZeroSignFlags(A);
 }
 void lsrZero(uint8_t address) {
-	SR = SR | (memory[address & 0xFF] & CARRY_FLAG);
-	memory[address & 0xFF] = memory[address & 0xFF] >> 1;
+	uint8_t value = memory[address & 0xFF];
+	if (value & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[address & 0xFF] = value >> 1;
 	setZeroSignFlags(memory[address & 0xFF]);
 }
 void lsrZeroX(uint8_t address) {
-	SR = SR | (memory[(address + X) & 0xFF] & CARRY_FLAG);
-	memory[(address + X) & 0xFF] = memory[(address + X) & 0xFF] << 1;
+	uint8_t value = memory[(address + X) & 0xFF];
+	if (value & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[(address + X) & 0xFF] = value >> 1;
 	setZeroSignFlags(memory[(address + X) & 0xFF]);
 }
 void lsrAbs(uint16_t address) {
-	SR = SR | (memory[address] & CARRY_FLAG);
-	memory[address] = memory[address] >> 1;
+	uint8_t value = memory[address];
+	if (value & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[address] = value >> 1;
 	setZeroSignFlags(memory[address]);
 }
 void lsrAbsX(uint16_t address) {
-	SR = SR | (memory[address + X] & CARRY_FLAG);
-	memory[address + X] = memory[address + X] >> 1;
-	setZeroSignFlags(memory[address + X]);
+	uint8_t value = memory[(address + X) & 0xFFFF];
+	if (value & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[(address + X) & 0xFFFF] = value >> 1;
+	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
 }
 /*
  ============================================================================
@@ -1031,7 +1155,7 @@ void ldyAbs(uint16_t address) {
 	setZeroSignFlags(Y);
 }
 void ldyAbsX(uint16_t address) {
-	Y = memory[address + X];
+	Y = memory[(address + X) & 0xFFFF];
 	setZeroSignFlags(Y);
 }
 /*
@@ -1056,7 +1180,7 @@ void ldxAbs(uint16_t address) {
 	setZeroSignFlags(X);
 }
 void ldxAbsY(uint16_t address) {
-	X = memory[address + Y];
+	X = memory[(address + Y) & 0xFFFF];
 	setZeroSignFlags(X);
 }
 /*
@@ -1081,11 +1205,11 @@ void ldaAbs(uint16_t address) {
 	setZeroSignFlags(A);
 }
 void ldaAbsX(uint16_t address) {
-	A = memory[address + X];
+	A = memory[(address + X) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void ldaAbsY(uint16_t address) {
-	A = memory[address + Y];
+	A = memory[(address + Y) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void ldaIndX(uint8_t address) {
@@ -1107,7 +1231,13 @@ void jmpAbs(uint16_t address) {
 	PC = address;
 }
 void jmpInd(uint16_t address) {
-	PC = *(uint16_t *) (memory + address);
+	PC = memory[address];
+
+	// mimic jmp bug in the CPU
+	if ((address & 0xFF) == 0xFF)
+		PC = PC | (memory[address & 0xFF00] << 8);
+	else
+		PC = PC | (memory[address + 1] << 8);
 }
 /*
  ============================================================================
@@ -1127,8 +1257,8 @@ void incAbs(uint16_t address) {
 	setZeroSignFlags(memory[address]);
 }
 void incAbsX(uint16_t address) {
-	memory[address + X]++;
-	setZeroSignFlags(memory[address + X]);
+	memory[(address + X) & 0xFFFF]++;
+	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
 }
 /*
  ============================================================================
@@ -1152,11 +1282,11 @@ void eorAbs(uint16_t address) {
 	setZeroSignFlags(A);
 }
 void eorAbsX(uint16_t address) {
-	A = A ^ memory[address + X];
+	A = A ^ memory[(address + X) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void eorAbsY(uint16_t address) {
-	A = A ^ memory[address + Y];
+	A = A ^ memory[(address + Y) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void eorIndX(uint8_t address) {
@@ -1187,8 +1317,8 @@ void decAbs(uint16_t address) {
 	setZeroSignFlags(memory[address]);
 }
 void decAbsX(uint16_t address) {
-	memory[address + X]--;
-	setZeroSignFlags(memory[address + X]);
+	memory[(address + X) & 0xFFFF]--;
+	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
 }
 /*
  ============================================================================
@@ -1366,33 +1496,33 @@ void cmpAbs(uint16_t address) {
 		SR = SR & (~SIGN_FLAG);
 }
 void cmpAbsX(uint16_t address) {
-	if (A >= memory[address + X])
+	if (A >= memory[(address + X) & 0xFFFF])
 		SR = SR | CARRY_FLAG;
 	else
 		SR = SR & (~CARRY_FLAG);
 
-	if (A == memory[address + X])
+	if (A == memory[(address + X) & 0xFFFF])
 		SR = SR | ZERO_FLAG;
 	else
 		SR = SR & (~ZERO_FLAG);
 
-	if ((A - memory[address + X]) & 0x80)
+	if ((A - memory[(address + X) & 0xFFFF]) & 0x80)
 		SR = SR | SIGN_FLAG;
 	else
 		SR = SR & (~SIGN_FLAG);
 }
 void cmpAbsY(uint16_t address) {
-	if (A >= memory[address + Y])
+	if (A >= memory[(address + Y) & 0xFFFF])
 		SR = SR | CARRY_FLAG;
 	else
 		SR = SR & (~CARRY_FLAG);
 
-	if (A == memory[address + Y])
+	if (A == memory[(address + Y) & 0xFFFF])
 		SR = SR | ZERO_FLAG;
 	else
 		SR = SR & (~ZERO_FLAG);
 
-	if ((A - memory[address + Y]) & 0x80)
+	if ((A - memory[(address + Y) & 0xFFFF]) & 0x80)
 		SR = SR | SIGN_FLAG;
 	else
 		SR = SR & (~SIGN_FLAG);
@@ -1441,16 +1571,32 @@ void bitZero(uint8_t address) {
 		SR = SR | ZERO_FLAG;
 	else
 		SR = SR & ~ZERO_FLAG;
-	SR = SR | (memory[address & 0xFF] & OVERFLOW_FLAG);
-	SR = SR | (memory[address & 0xFF] & SIGN_FLAG);
+
+	if (memory[address & 0xFF] & OVERFLOW_FLAG)
+		SR = SR | OVERFLOW_FLAG;
+	else
+		SR = SR & ~OVERFLOW_FLAG;
+
+	if (memory[address & 0xFF] & SIGN_FLAG)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & ~SIGN_FLAG;
 }
 void bitAbs(uint16_t address) {
 	if ((A & memory[address]) == 0)
 		SR = SR | ZERO_FLAG;
 	else
 		SR = SR & ~ZERO_FLAG;
-	SR = SR | (memory[address] & OVERFLOW_FLAG);
-	SR = SR | (memory[address] & SIGN_FLAG);
+
+	if (memory[address] & OVERFLOW_FLAG)
+		SR = SR | OVERFLOW_FLAG;
+	else
+		SR = SR & ~OVERFLOW_FLAG;
+
+	if (memory[address] & SIGN_FLAG)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & ~SIGN_FLAG;
 }
 /*
  ============================================================================
@@ -1459,29 +1605,53 @@ void bitAbs(uint16_t address) {
  */
 void asl() {
 	// set the carry flag to whatever was in bit 7 of A
-	SR = SR | ((A & SIGN_FLAG) >> 7);
+	if ((A >> 7) & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
 	A = A << 1;
 	setZeroSignFlags(A);
 }
 void aslZero(uint8_t address) {
-	SR = SR | ((memory[address & 0xFF] & SIGN_FLAG) >> 7);
-	memory[address & 0xFF] = memory[address & 0xFF] << 1;
+	uint8_t value = memory[address & 0xFF];
+	if ((value >> 7) & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[address & 0xFF] = value << 1;
 	setZeroSignFlags(memory[address & 0xFF]);
 }
 void aslZeroX(uint8_t address) {
-	SR = SR | ((memory[(address + X) & 0xFF] & SIGN_FLAG) >> 7);
-	memory[(address + X) & 0xFF] = memory[(address + X) & 0xFF] << 1;
+	uint8_t value = memory[(address + X) & 0xFF];
+	if ((value >> 7) & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[(address + X) & 0xFF] = value << 1;
 	setZeroSignFlags(memory[(address + X) & 0xFF]);
 }
 void aslAbs(uint16_t address) {
-	SR = SR | ((memory[address] & SIGN_FLAG) >> 7);
-	memory[address] = memory[address] << 1;
+	uint8_t value = memory[address];
+	if ((value >> 7) & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[address] = value << 1;
 	setZeroSignFlags(memory[address]);
 }
 void aslAbsX(uint16_t address) {
-	SR = SR | ((memory[address + X] & SIGN_FLAG) >> 7);
-	memory[address + X] = memory[address + X] << 1;
-	setZeroSignFlags(memory[address + X]);
+	uint8_t value = memory[(address + X) & 0xFFFF];
+	if ((value >> 7) & CARRY_FLAG) {
+		SR = SR | CARRY_FLAG;
+	} else {
+		SR = SR & ~CARRY_FLAG;
+	}
+	memory[(address + X) & 0xFFFF] = value << 1;
+	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
 }
 /*
  ============================================================================
@@ -1505,11 +1675,11 @@ void andAbs(uint16_t address) {
 	setZeroSignFlags(A);
 }
 void andAbsX(uint16_t address) {
-	A = A & memory[address + X];
+	A = A & memory[(address + X) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void andAbsY(uint16_t address) {
-	A = A & memory[address + Y];
+	A = A & memory[(address + Y) & 0xFFFF];
 	setZeroSignFlags(A);
 }
 void andIndX(uint8_t address) {
@@ -1574,14 +1744,14 @@ void adcAbs(uint16_t address) {
 /* two byte absolute address + X */
 void adcAbsX(uint16_t address) {
 	uint8_t oldA = A;
-	A = A + memory[address + X] + (SR & CARRY_FLAG);
-	setAdcFlags(oldA, memory[address + X], A);
+	A = A + memory[(address + X) & 0xFFFF] + (SR & CARRY_FLAG);
+	setAdcFlags(oldA, memory[(address + X) & 0xFFFF], A);
 }
 /* two byte absolute address + Y */
 void adcAbsY(uint16_t address) {
 	uint8_t oldA = A;
-	A = A + memory[address + Y] + (SR & CARRY_FLAG);
-	setAdcFlags(oldA, memory[address + Y], A);
+	A = A + memory[(address + Y) & 0xFFFF] + (SR & CARRY_FLAG);
+	setAdcFlags(oldA, memory[(address + Y) & 0xFFFF], A);
 }
 /* one byte indirect address + X with zero page wrap around */
 void adcIndX(uint8_t address) {
@@ -1599,24 +1769,53 @@ void adcIndY(uint8_t address) {
 }
 /*
  ============================================================================
- Other implied
+ No Op
  ============================================================================
  */
 void nop() {
 }
+void nopImm(uint8_t address) {
+}
+void nopZero(uint8_t address) {
+}
+void nopZeroX(uint8_t address) {
+}
+void nopAbs(uint16_t address) {
+}
+void nopAbsX(uint16_t address) {
+}
+void nopAbsY(uint16_t address) {
+}
+void nopIndX(uint8_t address) {
+}
+void nopIndY(uint8_t address) {
+}
 
+/*
+ ============================================================================
+ Other implied
+ ============================================================================
+ */
 void pha() {
 	memory[SP--] = A;
 }
 void php() {
-	memory[SP--] = SR;
+	memory[SP--] = SR | BREAK_FLAG;
 }
 void pla() {
-	A = memory[++SP];
+
+	if (SP == 0x17E) {
+		printf("");
+	}
+
+	SP++;
+	A = memory[SP];
 	setZeroSignFlags(A);
 }
 void plp() {
-	SR = memory[++SP];
+	SP++;
+	SR = memory[SP] & ~(BREAK_FLAG);
+	SR = SR | 0x20;
 }
 void tax() {
 	X = A;
@@ -1635,14 +1834,14 @@ void txa() {
 	setZeroSignFlags(A);
 }
 void txs() {
-	SP = X | 0x0100;
+	SP = (X & 0x1FF) | 0x100;
 }
 void tya() {
 	A = Y;
 	setZeroSignFlags(A);
 }
 void brk() {
-
+	SR = SR | BREAK_FLAG;
 }
 /*
  ============================================================================
@@ -1756,11 +1955,11 @@ void bvs(int8_t displacement) {
  */
 void dump() {
 
-	printf("\t\tA: %x ", A);
-	printf("X: %x ", X);
-	printf("Y: %x ", Y);
-	printf("P: %x ", SR);
-	printf("SP: %x\n", SP);
+	printf("A:%.2X ", A);
+	printf("X:%.2X ", X);
+	printf("Y:%.2X ", Y);
+	printf("P:%.2X ", SR);
+	printf("SP:%.2X\n", SP & 0xFF);
 
 }
 void setZeroSignFlags(uint8_t reg) {
@@ -1774,21 +1973,31 @@ void setZeroSignFlags(uint8_t reg) {
 	else
 		SR = SR & (~SIGN_FLAG);
 }
+void setSbcOverflow(uint8_t one, uint8_t two, uint8_t result) {
+
+	SR = SR & ~OVERFLOW_FLAG;
+	if ((one & 0x80) != (two & 0x80) && (result & 0x80) == (two & 0x80)) {
+		SR = SR | OVERFLOW_FLAG;
+	}
+}
+
 void setOverflow(uint8_t one, uint8_t two, uint8_t result) {
 
 	SR = SR & ~OVERFLOW_FLAG;
-	if ((one & 0x80) && (two & 0x80) && (result & 0x80) == 0) {
-		SR = SR | OVERFLOW_FLAG;
-	} else if ((one & 0x80) == 0 && (two & 0x80) == 0 && (result & 0x80)) {
+	if ((one & 0x80) == (two & 0x80) && (result & 0x80) != (one & 0x80)) {
 		SR = SR | OVERFLOW_FLAG;
 	}
 }
 uint16_t indXAddress(uint8_t address) {
-	uint16_t result = *(uint16_t *) (memory + ((address + X) & 0xFF));
+
+	uint16_t result = memory[(address + X) & 0xFF];
+	result = result | (memory[((address + X + 1) & 0xFF)] << 8);
 	return result;
 }
 uint16_t indYAddress(uint8_t address) {
-	uint16_t result = (*(uint16_t *) (memory + (address & 0xFF))) + Y;
+	uint16_t result = memory[address & 0xFF];
+	result = result | (memory[(address + 1) & 0xFF] << 8);
+	result += Y;
 	return result;
 }
 

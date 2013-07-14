@@ -283,12 +283,27 @@ void adcAbsX(uint16_t address);
 void adcAbsY(uint16_t address);
 void adcIndX(uint8_t address);
 void adcIndY(uint8_t address);
+
+/*
+ ============================================================================
+ No Op
+ ============================================================================
+ */
+void nop();
+void nopImm(uint8_t address);
+void nopZero(uint8_t address);
+void nopZeroX(uint8_t address);
+void nopAbs(uint16_t address);
+void nopAbsX(uint16_t address);
+void nopAbsY(uint16_t address);
+void nopIndX(uint8_t address);
+void nopIndY(uint8_t address);
+
 /*
  ============================================================================
  Other implied
  ============================================================================
  */
-void nop();
 void pha();
 void php();
 void pla();
@@ -349,6 +364,7 @@ void iny();
  */
 void dump();
 void setZeroSignFlags(uint8_t reg);
+void setSbcOverflow(uint8_t one, uint8_t two, uint8_t result);
 void setOverflow(uint8_t one, uint8_t two, uint8_t result);
 uint16_t indXAddress(uint8_t address);
 uint16_t indYAddress(uint8_t address);
