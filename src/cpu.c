@@ -616,18 +616,16 @@ void run_6502(char* filename) {
 	SDL_WM_SetCaption("6502 Emulator", NULL);
 
 	SDL_Event event;
-	int rate = 200;
+	int rate = 5;
 	int done = 0;
 	while (!done) {
 		memory[0xFE] = rand() % 256;
 		uint8_t ins = readByte();
-		printf("%.2X  ", ins);
-		dump();
 		done = processIns(ins);
 
 		if (rate-- == 0) {
 			drawRects(screen, screen->w / 32);
-			rate = 200;
+			rate = 5;
 		}
 
 		SDL_PollEvent(&event);
