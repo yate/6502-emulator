@@ -12,8 +12,6 @@
 #include "cpu.h"
 
 int main(int argc, char *argv[]) {
-
-	printf("test");
-	run_6502("adventure.obj");
+	run_6502("spacer.obj");
 	return 0;
 }

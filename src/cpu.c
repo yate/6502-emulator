@@ -613,124 +613,105 @@ void run_6502(char* filename) {
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 256, 256,
-			SDL_WINDOW_OPENGL);
+	SDL_WINDOW_OPENGL);
 
 	if (window == NULL) {
 		printf("Error opening window: %s", SDL_GetError());
 		return;
 	}
 
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
 	if (renderer == NULL) {
 		printf("Error creating renderer: %s", SDL_GetError());
 		return;
 	}
 
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, 32,
+			32);
 
-	SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, 256,
-			256);
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	SDL_RenderSetLogicalSize(renderer, 256, 256);
 
-	SDL_Event event;
-	int rate = 2;
 	int done = 0;
 	while (!done) {
 		memory[0xFE] = rand() % 256;
 		uint8_t ins = readByte();
 		done = processIns(ins);
 
-		if (rate-- == 0) {
-			drawPixels(screen_texture, renderer);
-			rate = 2;
-		}
+		drawPixels(screen_texture, renderer);
 
-		SDL_PollEvent(&event);
-		switch (event.type) {
-		case SDL_KEYDOWN:
-			memory[0xFF] = event.key.keysym.sym;
-			break;
-		case SDL_QUIT:
-			SDL_Quit();
-			return;
+		SDL_Event event;
+		if (SDL_PollEvent(&event)) {
+			if (event.type == SDL_QUIT) return;
+			if (event.type == SDL_KEYDOWN) memory[0xFF] = event.key.keysym.sym;
 		}
 	}
-	drawPixels(screen_texture, renderer);
 	printf("done...\n");
-	while (1) {
-		SDL_WaitEvent(&event);
-		switch (event.type) {
-		case SDL_KEYDOWN:
-			SDL_Quit();
-			return;
-		case SDL_QUIT:
-			SDL_Quit();
-			return;
-		}
+
+	SDL_Event event;
+	while (event.type != SDL_QUIT && event.type != SDL_TEXTINPUT) {
+		SDL_PollEvent(&event);
 	}
 }
 
 void drawPixels(SDL_Texture *screen_texture, SDL_Renderer *renderer) {
 
-	uint8_t pixel_buffer[256 * 256];
-	uint16_t pixelNum = pixelMap;
-	for (int y = 0; y < 256; y++) {
-		for (int x = 0; x < 256; x++) {
-			uint8_t pixel = memory[pixelNum];
-			switch (pixel) {
-			case 0:
-				pixel_buffer[pixelNum] = 0x00;
-				break;
-			case 1:
-				pixel_buffer[pixelNum] = 0xff;
-				break;
-			case 2:
-				pixel_buffer[pixelNum] = 0xe0;
-				break;
-			case 3:
-				pixel_buffer[pixelNum] = 0x1f;
-				break;
-			case 4:
-				pixel_buffer[pixelNum] = 0x82;
-				break;
-			case 5:
-				pixel_buffer[pixelNum] = 0x1c;
-				break;
-			case 6:
-				pixel_buffer[pixelNum] = 0x03;
-				break;
-			case 7:
-				pixel_buffer[pixelNum] = 0xfc;
-				break;
-			case 8:
-				pixel_buffer[pixelNum] = 0xf0;
-				break;
-			case 9:
-				pixel_buffer[pixelNum] = 0x84;
-				break;
-			case 10:
-				pixel_buffer[pixelNum] = 0xe3;
-				break;
-			case 11:
-				pixel_buffer[pixelNum] = 0x49;
-				break;
-			case 12:
-				pixel_buffer[pixelNum] = 0x92;
-				break;
-			case 13:
-				pixel_buffer[pixelNum] = 0xbf;
-				break;
-			case 14:
-				pixel_buffer[pixelNum] = 0x0f;
-				break;
-			case 15:
-				pixel_buffer[pixelNum] = 0xd2;
-				break;
-			}
-			pixelNum++;
+	uint8_t pixel_buffer[32 * 32];
+	uint16_t buffer_index = 0;
+	for (uint16_t pixelNum = pixelMap; pixelNum <= 0x05ff; pixelNum++, buffer_index++) {
+		uint8_t pixel = memory[pixelNum];
+		switch (pixel) {
+		case 0:
+			pixel_buffer[buffer_index] = 0x00;
+			break;
+		case 1:
+			pixel_buffer[buffer_index] = 0xff;
+			break;
+		case 2:
+			pixel_buffer[buffer_index] = 0xe0;
+			break;
+		case 3:
+			pixel_buffer[buffer_index] = 0x1f;
+			break;
+		case 4:
+			pixel_buffer[buffer_index] = 0x82;
+			break;
+		case 5:
+			pixel_buffer[buffer_index] = 0x1c;
+			break;
+		case 6:
+			pixel_buffer[buffer_index] = 0x03;
+			break;
+		case 7:
+			pixel_buffer[buffer_index] = 0xfc;
+			break;
+		case 8:
+			pixel_buffer[buffer_index] = 0xf0;
+			break;
+		case 9:
+			pixel_buffer[buffer_index] = 0x84;
+			break;
+		case 10:
+			pixel_buffer[buffer_index] = 0xe3;
+			break;
+		case 11:
+			pixel_buffer[buffer_index] = 0x49;
+			break;
+		case 12:
+			pixel_buffer[buffer_index] = 0x92;
+			break;
+		case 13:
+			pixel_buffer[buffer_index] = 0xbf;
+			break;
+		case 14:
+			pixel_buffer[buffer_index] = 0x0f;
+			break;
+		case 15:
+			pixel_buffer[buffer_index] = 0xd2;
 		}
 	}
-	SDL_UpdateTexture(screen_texture, NULL, pixel_buffer, 640 * sizeof(uint8_t));
+	SDL_UpdateTexture(screen_texture, NULL, pixel_buffer, 32 * sizeof(uint8_t));
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
