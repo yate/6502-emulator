@@ -13,6 +13,7 @@
 
 int main(int argc, char *argv[]) {
 
+	printf("test");
 	run_6502("adventure.obj");
 	return 0;
 }
