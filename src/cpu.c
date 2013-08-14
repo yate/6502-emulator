@@ -616,7 +616,7 @@ void run_6502(char* filename) {
 	SDL_WM_SetCaption("6502 Emulator", NULL);
 
 	SDL_Event event;
-	int rate = 5;
+	int rate = 2;
 	int done = 0;
 	while (!done) {
 		memory[0xFE] = rand() % 256;
@@ -625,7 +625,7 @@ void run_6502(char* filename) {
 
 		if (rate-- == 0) {
 			drawRects(screen, screen->w / 32);
-			rate = 5;
+			rate = 2;
 		}
 
 		SDL_PollEvent(&event);
@@ -679,7 +679,7 @@ void run_nes(char* filename) {
 		memory[startPC++] = fgetc(file);
 	}
 	for (int i = 0; i < vrom_banks * 0x2000; i++) {
-		ppu_memory[i] = fgetc(file);
+		//ppu_memory[i] = fgetc(file);
 	}
 
 	SDL_Init(SDL_INIT_EVERYTHING);

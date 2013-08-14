@@ -9,10 +9,14 @@
  */
 
 #include <stdio.h>
-#include "cpu.h"
+//#include "cpu.h"
+#include "rom.h"
 
 int main(int argc, char *argv[]) {
 
-	run_6502("adventure.obj");
+	//run_6502("adventure.obj");
+
+	rom_t rom = create_rom("mario.nes");
+
 	return 0;
 }

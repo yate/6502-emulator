@@ -24,13 +24,16 @@
 #define IMAGE_PALETTE 0x3F00
 #define SPRITE_PALETTE 0x3F10
 
-#define MIRROR_HORIZONTAL 1
-#define MIRROR_VERTICAL 2
-#define MIRROR_SINGLE 3
+typedef enum {
+	MIRROR_HORIZENTAL = 1,
+	MIRROR_VERTICAL,
+	MIRROR_SINGLE
+} mirror_mode_t;
 
-extern uint8_t ppu_memory[0x4000];
-extern uint8_t mirroring_mode;
-
+typedef struct {
+	uint8_t memory[0x4000];
+	mirror_mode_t mirroring_mode;
+} ppu_t;
 
 void write_name_table(uint16_t address, uint8_t data);
 uint8_t read_name_table(uint16_t address);
