@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #define CARRY_FLAG 0x01
 #define ZERO_FLAG 0x02
@@ -369,7 +369,7 @@ void setSbcOverflow(uint8_t one, uint8_t two, uint8_t result);
 void setOverflow(uint8_t one, uint8_t two, uint8_t result);
 uint16_t indXAddress(uint8_t address);
 uint16_t indYAddress(uint8_t address);
-void drawPixel();
+void drawPixels();
 void drawRects();
 
 #endif /* CPU_H_ */
