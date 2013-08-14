@@ -12,6 +12,6 @@
 #include "cpu.h"
 
 int main(int argc, char *argv[]) {
-	run_6502("spacer.obj");
+	run_6502("gol.obj");
 	return 0;
 }

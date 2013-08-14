@@ -15,7 +15,7 @@ uint8_t SR = 0x24; /* status register 00100000 */
 uint16_t SP = 0x01FD; /* stack pointer to the low byte of the stack */
 uint16_t PC = 0xC000; /* program counter */
 
-uint8_t memory[0x10000];
+uint8_t memory[0x10000] = { 0 };
 
 uint16_t pixelMap = 0x0200;
 
@@ -592,9 +592,6 @@ void run_6502(char* filename) {
 	SP = 0x01FF;
 
 	srand(time(NULL));
-	for (int i = 0; i < 0x10000; i++) {
-		memory[i] = 0x00;
-	}
 
 	FILE *file = fopen(filename, "rb");
 	if (file == NULL) {
@@ -612,34 +609,26 @@ void run_6502(char* filename) {
 
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 256, 256,
-	SDL_WINDOW_OPENGL);
-
-	if (window == NULL) {
-		printf("Error opening window: %s", SDL_GetError());
-		return;
-	}
-
+	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512,
+			SDL_WINDOW_OPENGL);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-
-	if (renderer == NULL) {
-		printf("Error creating renderer: %s", SDL_GetError());
-		return;
-	}
-
 	SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, 32,
 			32);
 
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	SDL_RenderSetLogicalSize(renderer, 256, 256);
+	SDL_RenderSetLogicalSize(renderer, 512, 512);
 
 	int done = 0;
+	int frame = 200;
 	while (!done) {
 		memory[0xFE] = rand() % 256;
 		uint8_t ins = readByte();
 		done = processIns(ins);
 
-		drawPixels(screen_texture, renderer);
+		if (frame-- == 0) {
+			drawPixels(screen_texture, renderer);
+			frame = 200;
+		}
 
 		SDL_Event event;
 		if (SDL_PollEvent(&event)) {
@@ -648,7 +637,7 @@ void run_6502(char* filename) {
 		}
 	}
 	printf("done...\n");
-
+	drawPixels(screen_texture, renderer);
 	SDL_Event event;
 	while (event.type != SDL_QUIT && event.type != SDL_TEXTINPUT) {
 		SDL_PollEvent(&event);
@@ -712,7 +701,6 @@ void drawPixels(SDL_Texture *screen_texture, SDL_Renderer *renderer) {
 		}
 	}
 	SDL_UpdateTexture(screen_texture, NULL, pixel_buffer, 32 * sizeof(uint8_t));
-	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
