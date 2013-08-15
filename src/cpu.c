@@ -12,8 +12,8 @@ uint8_t A = 0; /* accumulator register */
 uint8_t X = 0; /* index X register */
 uint8_t Y = 0; /* index Y register */
 uint8_t SR = 0x24; /* status register 00100000 */
-uint16_t SP = 0x01FD; /* stack pointer to the low byte of the stack */
-uint16_t PC = 0xC000; /* program counter */
+uint16_t SP = 0x01FF; /* stack pointer to the low byte of the stack */
+uint16_t PC = 0x8000; /* program counter */
 
 uint8_t memory[0x10000] = { 0 };
 
@@ -586,6 +586,39 @@ int processIns(uint8_t ins) {
 	return done;
 }
 
+void run_nes(ppu_t *ppu) {
+	SDL_Init(SDL_INIT_EVERYTHING);
+
+	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512,
+			SDL_WINDOW_OPENGL);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING,
+	SCREEN_WIDTH,
+	SCREEN_HEIGHT);
+
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	SDL_RenderSetLogicalSize(renderer, 512, 512);
+
+	int done = 0;
+	while (!done) {
+		uint8_t ins = readByte();
+		done = processIns(ins);
+
+		ppu_draw(ppu, screen_texture, renderer);
+
+		SDL_Event event;
+		if (SDL_PollEvent(&event)) {
+			if (event.type == SDL_QUIT) return;
+		}
+	}
+	printf("done...\n");
+	ppu_draw(ppu, screen_texture, renderer);
+	SDL_Event event;
+	while (event.type != SDL_QUIT && event.type != SDL_TEXTINPUT) {
+		SDL_PollEvent(&event);
+	}
+}
+
 void run_6502(char* filename) {
 
 	PC = 0x0600;
@@ -703,6 +736,16 @@ void drawPixels(SDL_Texture *screen_texture, SDL_Renderer *renderer) {
 	SDL_UpdateTexture(screen_texture, NULL, pixel_buffer, 32 * sizeof(uint8_t));
 	SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
+}
+
+/**
+ * Loads the ROM into CPU memory and sets the PC
+ */
+void cpu_load_rom(rom_t *rom) {
+	memcpy(memory + LOWER_ROM_BANK, rom->rom_banks, rom->prg_rom_size);
+
+	PC = memory[0xfffc]; /* low byte */
+	PC = PC | (memory[0xfffd] << 8); /* high byte */
 }
 /*
  ============================================================================

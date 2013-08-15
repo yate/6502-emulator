@@ -7,11 +7,15 @@
 #ifndef CPU_H_
 #define CPU_H_
 
+#include <string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <SDL2/SDL.h>
+
+
+#include "rom.h"
+#include "ppu.h"
 
 #define CARRY_FLAG 0x01
 #define ZERO_FLAG 0x02
@@ -20,6 +24,13 @@
 #define BREAK_FLAG 0x10
 #define OVERFLOW_FLAG 0x40
 #define SIGN_FLAG 0x80
+
+#define UPPER_ROM_BANK 0xC000
+#define LOWER_ROM_BANK 0x8000
+#define CARTRIDGE_RAM 0x6000
+#define EXPANSION_MODULES 0x5000
+#define INPUT_OUTPUT 0x2000
+#define CPU_RAM 0x0000
 
 #define PIXEL_ADDRESS 0x0200
 
@@ -39,8 +50,9 @@ extern uint16_t pixelMap;
  Main
  ============================================================================
  */
+void cpu_load_rom(rom_t *rom);
 void run_6502();
-void run_nes();
+void run_nes(ppu_t *ppu);
 /*
  ============================================================================
  Interrupts
