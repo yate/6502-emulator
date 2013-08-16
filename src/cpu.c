@@ -17,6 +17,8 @@ uint16_t PC = 0x8000; /* program counter */
 
 uint8_t memory[0x10000] = { 0 };
 
+ppu_t *ppu;
+
 uint16_t pixelMap = 0x0200;
 
 /*
@@ -586,22 +588,28 @@ int processIns(uint8_t ins) {
 	return done;
 }
 
-void run_nes(ppu_t *ppu) {
+void run_nes(ppu_t *ppu_param) {
+
+	ppu = ppu_param;
+
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512,
-			SDL_WINDOW_OPENGL);
+	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING,
 	SCREEN_WIDTH,
 	SCREEN_HEIGHT);
 
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	SDL_RenderSetLogicalSize(renderer, 512, 512);
+	SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	int done = 0;
 	while (!done) {
 		uint8_t ins = readByte();
+		printf("INS: %X ", ins);
+		dump();
 		done = processIns(ins);
 
 		ppu_draw(ppu, screen_texture, renderer);
@@ -652,7 +660,7 @@ void run_6502(char* filename) {
 	SDL_RenderSetLogicalSize(renderer, 512, 512);
 
 	int done = 0;
-	int frame = 200;
+	int frame = 5;
 	while (!done) {
 		memory[0xFE] = rand() % 256;
 		uint8_t ins = readByte();
@@ -660,7 +668,7 @@ void run_6502(char* filename) {
 
 		if (frame-- == 0) {
 			drawPixels(screen_texture, renderer);
-			frame = 200;
+			frame = 5;
 		}
 
 		SDL_Event event;
@@ -789,19 +797,37 @@ void rts() {
 	PC = PC | (memory[SP] << 8);
 	PC++;
 }
+void write_mem(uint16_t address, uint8_t value) {
+	memory[address] = value;
+
+	if (address == 0x2006) {
+		if (ppu->access_number == 0) {
+			ppu->address_buffer = value;
+		} else {
+			ppu->address_buffer <<= 8;
+			ppu->address_buffer |= value;
+		}
+		ppu_inc_access_number(ppu);
+	}
+
+	if (address == 0x2007) {
+		ppu->memory[ppu->address_buffer] = value;
+	}
+
+}
 /*
  ============================================================================
  Store Y Register
  ============================================================================
  */
 void styZero(uint8_t address) {
-	memory[address & 0xFF] = Y;
+	write_mem(address & 0xFF, Y);
 }
 void styZeroX(uint8_t address) {
-	memory[(address + X) & 0xFF] = Y;
+	write_mem((address + X) & 0xFF, Y);
 }
 void styAbs(uint16_t address) {
-	memory[address] = Y;
+	write_mem(address, Y);
 }
 /*
  ============================================================================
@@ -810,12 +836,15 @@ void styAbs(uint16_t address) {
  */
 void stxZero(uint8_t address) {
 	memory[address & 0xFF] = X;
+	write_mem(address & 0xFF, X);
 }
 void stxZeroY(uint8_t address) {
 	memory[(address + Y) & 0xFF] = X;
+	write_mem((address + Y) & 0xFF, X);
 }
 void stxAbs(uint16_t address) {
 	memory[address] = X;
+	write_mem(address, X);
 }
 /*
  ============================================================================
@@ -824,26 +853,33 @@ void stxAbs(uint16_t address) {
  */
 void staZero(uint8_t address) {
 	memory[address & 0xFF] = A;
+	write_mem(address & 0xFF, A);
 }
 void staZeroX(uint8_t address) {
 	memory[(address + X) & 0xFF] = A;
+	write_mem((address + X) & 0xFF, A);
 }
 void staAbs(uint16_t address) {
 	memory[address] = A;
+	write_mem(address, A);
 }
 void staAbsX(uint16_t address) {
 	memory[(address + X) & 0xFFFF] = A;
+	write_mem((address + X) & 0xFFFF, A);
 }
 void staAbsY(uint16_t address) {
 	memory[(address + Y) & 0xFFFF] = A;
+	write_mem((address + Y) & 0xFFFF, A);
 }
 void staIndX(uint8_t address) {
 	uint16_t newAddress = indXAddress(address);
 	memory[newAddress] = A;
+	write_mem(newAddress, A);
 }
 void staIndY(uint8_t address) {
 	uint16_t newAddress = indYAddress(address);
 	memory[newAddress] = A;
+	write_mem(newAddress, A);
 }
 /*
  ============================================================================
@@ -1667,6 +1703,7 @@ void bvs(int8_t displacement) {
  ============================================================================
  */
 void dump() {
+	printf("PC:%.2X ", PC);
 	printf("A:%.2X ", A);
 	printf("X:%.2X ", X);
 	printf("Y:%.2X ", Y);

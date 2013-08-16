@@ -33,24 +33,22 @@
 #define SCREEN_HEIGHT 240
 
 typedef enum {
-	MIRROR_HORIZONTAL = 0,
-	MIRROR_VERTICAL,
-	MIRROR_SINGLE
+	MIRROR_HORIZONTAL = 0, MIRROR_VERTICAL, MIRROR_SINGLE
 } mirror_mode_t;
 
 typedef struct {
 	uint8_t memory[0x4000];
+	uint8_t access_number;
+	uint16_t address_buffer;
 	mirror_mode_t mirroring_mode;
 } ppu_t;
-
-
 
 ppu_t create_ppu(rom_t *rom);
 void ppu_load_vrom(ppu_t *ppu, rom_t *rom);
 void ppu_draw(ppu_t *ppu, SDL_Texture *screen_texture, SDL_Renderer *renderer);
+void ppu_inc_access_number(ppu_t *ppu);
 
 void write_name_table(uint16_t address, uint8_t data);
 uint8_t read_name_table(uint16_t address);
-
 
 #endif /* PPU_H_ */

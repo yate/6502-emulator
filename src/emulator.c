@@ -21,6 +21,8 @@ int main(int argc, char *argv[]) {
 
 	run_nes(&ppu);
 
+	//run_6502("adventure.obj");
+
 	destroy_rom(&rom);
 
 	return 0;
