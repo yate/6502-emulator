@@ -595,28 +595,34 @@ void run_nes(ppu_t *ppu_param) {
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	SDL_Window *window = SDL_CreateWindow("6502 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-			SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
+	SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING,
 	SCREEN_WIDTH,
 	SCREEN_HEIGHT);
+
+	// PC = 0x8000;
 
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	int done = 0;
+	int rate = 200;
 	while (!done) {
 		uint8_t ins = readByte();
 		printf("INS: %X ", ins);
 		dump();
 		done = processIns(ins);
 
-		ppu_draw(ppu, screen_texture, renderer);
-
+		if (rate-- == 0) {
+			ppu_draw(ppu, screen_texture, renderer);
+			rate = 200;
+		}
 		SDL_Event event;
 		if (SDL_PollEvent(&event)) {
-			if (event.type == SDL_QUIT) return;
+			if (event.type == SDL_QUIT)
+				return;
 		}
 	}
 	printf("done...\n");
@@ -673,8 +679,10 @@ void run_6502(char* filename) {
 
 		SDL_Event event;
 		if (SDL_PollEvent(&event)) {
-			if (event.type == SDL_QUIT) return;
-			if (event.type == SDL_KEYDOWN) memory[0xFF] = event.key.keysym.sym;
+			if (event.type == SDL_QUIT)
+				return;
+			if (event.type == SDL_KEYDOWN)
+				memory[0xFF] = event.key.keysym.sym;
 		}
 	}
 	printf("done...\n");
@@ -798,9 +806,22 @@ void rts() {
 	PC++;
 }
 void write_mem(uint16_t address, uint8_t value) {
+
+	if (address >= 0x2000 && address <= 0x3FFF) {
+		address &= 0x0007;
+		address |= 0x2000;
+	}
+
 	memory[address] = value;
 
-	if (address == 0x2006) {
+	if (address == 0x4014) {
+		uint8_t sprite_addr = memory[0x2003];
+		ppu->sprite_memory[sprite_addr] = memory[value * 0x100];
+	} else if (address == 0x2004) {
+		uint8_t sprite_addr = memory[0x2003];
+		ppu->sprite_memory[sprite_addr] = value;
+		memory[0x2003]++;
+	} else if (address == 0x2006) {
 		if (ppu->access_number == 0) {
 			ppu->address_buffer = value;
 		} else {
@@ -808,10 +829,10 @@ void write_mem(uint16_t address, uint8_t value) {
 			ppu->address_buffer |= value;
 		}
 		ppu_inc_access_number(ppu);
-	}
-
-	if (address == 0x2007) {
+	} else if (address == 0x2007) {
 		ppu->memory[ppu->address_buffer] = value;
+		memory[0x2006]++;
+		ppu->address_buffer++;
 	}
 
 }
@@ -887,14 +908,20 @@ void staIndY(uint8_t address) {
  ============================================================================
  */
 void setSbcFlags(uint8_t A, uint8_t B, uint8_t result) {
-	if (result == 0) SR = SR | ZERO_FLAG;
-	else SR = SR & (~ZERO_FLAG);
+	if (result == 0)
+		SR = SR | ZERO_FLAG;
+	else
+		SR = SR & (~ZERO_FLAG);
 
-	if (result > A) SR = SR & ~CARRY_FLAG;
-	else SR = SR | CARRY_FLAG;
+	if (result > A)
+		SR = SR & ~CARRY_FLAG;
+	else
+		SR = SR | CARRY_FLAG;
 
-	if (result & 0x80) SR = SR | SIGN_FLAG;
-	else SR = SR & (~SIGN_FLAG);
+	if (result & 0x80)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & (~SIGN_FLAG);
 
 	setSbcOverflow(A, B, result);
 }
@@ -1075,38 +1102,48 @@ void oraIndY(uint8_t address) {
  */
 void lsr() {
 	// set the carry flag to whatever was in bit 7 of A
-	if (A & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if (A & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 	A = A >> 1;
 	setZeroSignFlags(A);
 }
 void lsrZero(uint8_t address) {
 	uint8_t value = memory[address & 0xFF];
-	if (value & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if (value & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 	memory[address & 0xFF] = value >> 1;
 	setZeroSignFlags(memory[address & 0xFF]);
 }
 void lsrZeroX(uint8_t address) {
 	uint8_t value = memory[(address + X) & 0xFF];
-	if (value & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if (value & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[(address + X) & 0xFF] = value >> 1;
 	setZeroSignFlags(memory[(address + X) & 0xFF]);
 }
 void lsrAbs(uint16_t address) {
 	uint8_t value = memory[address];
-	if (value & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if (value & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[address] = value >> 1;
 	setZeroSignFlags(memory[address]);
 }
 void lsrAbsX(uint16_t address) {
 	uint8_t value = memory[(address + X) & 0xFFFF];
-	if (value & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if (value & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[(address + X) & 0xFFFF] = value >> 1;
 	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
@@ -1116,24 +1153,41 @@ void lsrAbsX(uint16_t address) {
  Load Y Register
  ============================================================================
  */
+void load_value(uint8_t *value, uint16_t address) {
+	if (address >= 0x2000 && address <= 0x3FFF) {
+		address &= 0x0007;
+		address |= 0x2000;
+	}
+	if (address == 0x2004) {
+		uint8_t sprite_addr = memory[0x2003];
+		*value = ppu->sprite_memory[sprite_addr];
+		memory[0x2003]++;
+	} else if (address == 0x2007) {
+		*value = ppu->memory[ppu->address_buffer];
+		memory[0x2006]++;
+		ppu->address_buffer++;
+	} else {
+		*value = memory[address];
+	}
+}
 void ldy(uint8_t address) {
 	Y = address;
 	setZeroSignFlags(Y);
 }
 void ldyZero(uint8_t address) {
-	Y = memory[address & 0xFF];
+	load_value(&Y, address & 0xFF);
 	setZeroSignFlags(Y);
 }
 void ldyZeroX(uint8_t address) {
-	Y = memory[(address + X) & 0xFF];
+	load_value(&Y, (address + X) & 0xFF);
 	setZeroSignFlags(Y);
 }
 void ldyAbs(uint16_t address) {
-	Y = memory[address];
+	load_value(&Y, address);
 	setZeroSignFlags(Y);
 }
 void ldyAbsX(uint16_t address) {
-	Y = memory[(address + X) & 0xFFFF];
+	load_value(&Y, (address + X) & 0xFFFF);
 	setZeroSignFlags(Y);
 }
 /*
@@ -1147,18 +1201,19 @@ void ldx(uint8_t address) {
 }
 void ldxZero(uint8_t address) {
 	X = memory[address & 0xFF];
+	load_value(&X, address & 0xFF);
 	setZeroSignFlags(X);
 }
 void ldxZeroY(uint8_t address) {
-	X = memory[(address + Y) & 0xFF];
+	load_value(&X, (address + Y) & 0xFF);
 	setZeroSignFlags(X);
 }
 void ldxAbs(uint16_t address) {
-	X = memory[address];
+	load_value(&X, address);
 	setZeroSignFlags(X);
 }
 void ldxAbsY(uint16_t address) {
-	X = memory[(address + Y) & 0xFFFF];
+	load_value(&X, (address + Y) & 0xFFFF);
 	setZeroSignFlags(X);
 }
 /*
@@ -1171,33 +1226,33 @@ void lda(uint8_t address) {
 	setZeroSignFlags(A);
 }
 void ldaZero(uint8_t address) {
-	A = memory[address & 0xFF];
+	load_value(&A, address & 0xFF);
 	setZeroSignFlags(A);
 }
 void ldaZeroX(uint8_t address) {
-	A = memory[(address + X) & 0xFF];
+	load_value(&A, (address + X) & 0xFF);
 	setZeroSignFlags(A);
 }
 void ldaAbs(uint16_t address) {
-	A = memory[address];
+	load_value(&A, address);
 	setZeroSignFlags(A);
 }
 void ldaAbsX(uint16_t address) {
-	A = memory[(address + X) & 0xFFFF];
+	load_value(&A, (address + X) & 0xFFFF);
 	setZeroSignFlags(A);
 }
 void ldaAbsY(uint16_t address) {
-	A = memory[(address + Y) & 0xFFFF];
+	load_value(&A, (address + Y) & 0xFFFF);
 	setZeroSignFlags(A);
 }
 void ldaIndX(uint8_t address) {
 	uint16_t newAddress = indXAddress(address);
-	A = memory[newAddress];
+	load_value(&A, newAddress);
 	setZeroSignFlags(A);
 }
 void ldaIndY(uint8_t address) {
 	uint16_t newAddress = indYAddress(address);
-	A = memory[newAddress];
+	load_value(&A, newAddress);
 	setZeroSignFlags(A);
 }
 /*
@@ -1212,8 +1267,10 @@ void jmpInd(uint16_t address) {
 	PC = memory[address];
 
 	// mimic jmp bug in the CPU
-	if ((address & 0xFF) == 0xFF) PC = PC | (memory[address & 0xFF00] << 8);
-	else PC = PC | (memory[address + 1] << 8);
+	if ((address & 0xFF) == 0xFF)
+		PC = PC | (memory[address & 0xFF00] << 8);
+	else
+		PC = PC | (memory[address + 1] << 8);
 }
 /*
  ============================================================================
@@ -1332,14 +1389,20 @@ void cmpXAbs(uint16_t address) {
  */
 
 void compare(uint8_t A, uint8_t B) {
-	if (A >= B) SR = SR | CARRY_FLAG;
-	else SR = SR & (~CARRY_FLAG);
+	if (A >= B)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & (~CARRY_FLAG);
 
-	if (A == B) SR = SR | ZERO_FLAG;
-	else SR = SR & (~ZERO_FLAG);
+	if (A == B)
+		SR = SR | ZERO_FLAG;
+	else
+		SR = SR & (~ZERO_FLAG);
 
-	if ((A - B) & 0x80) SR = SR | SIGN_FLAG;
-	else SR = SR & (~SIGN_FLAG);
+	if ((A - B) & 0x80)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & (~SIGN_FLAG);
 }
 void cmp(uint8_t address) {
 	compare(A, address);
@@ -1373,24 +1436,36 @@ void cmpIndY(uint8_t address) {
  ============================================================================
  */
 void bitZero(uint8_t address) {
-	if ((A & memory[address & 0xFF]) == 0) SR = SR | ZERO_FLAG;
-	else SR = SR & ~ZERO_FLAG;
+	if ((A & memory[address & 0xFF]) == 0)
+		SR = SR | ZERO_FLAG;
+	else
+		SR = SR & ~ZERO_FLAG;
 
-	if (memory[address & 0xFF] & OVERFLOW_FLAG) SR = SR | OVERFLOW_FLAG;
-	else SR = SR & ~OVERFLOW_FLAG;
+	if (memory[address & 0xFF] & OVERFLOW_FLAG)
+		SR = SR | OVERFLOW_FLAG;
+	else
+		SR = SR & ~OVERFLOW_FLAG;
 
-	if (memory[address & 0xFF] & SIGN_FLAG) SR = SR | SIGN_FLAG;
-	else SR = SR & ~SIGN_FLAG;
+	if (memory[address & 0xFF] & SIGN_FLAG)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & ~SIGN_FLAG;
 }
 void bitAbs(uint16_t address) {
-	if ((A & memory[address]) == 0) SR = SR | ZERO_FLAG;
-	else SR = SR & ~ZERO_FLAG;
+	if ((A & memory[address]) == 0)
+		SR = SR | ZERO_FLAG;
+	else
+		SR = SR & ~ZERO_FLAG;
 
-	if (memory[address] & OVERFLOW_FLAG) SR = SR | OVERFLOW_FLAG;
-	else SR = SR & ~OVERFLOW_FLAG;
+	if (memory[address] & OVERFLOW_FLAG)
+		SR = SR | OVERFLOW_FLAG;
+	else
+		SR = SR & ~OVERFLOW_FLAG;
 
-	if (memory[address] & SIGN_FLAG) SR = SR | SIGN_FLAG;
-	else SR = SR & ~SIGN_FLAG;
+	if (memory[address] & SIGN_FLAG)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & ~SIGN_FLAG;
 }
 /*
  ============================================================================
@@ -1399,40 +1474,50 @@ void bitAbs(uint16_t address) {
  */
 void asl() {
 	// set the carry flag to whatever was in bit 7 of A
-	if ((A >> 7) & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if ((A >> 7) & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	A = A << 1;
 	setZeroSignFlags(A);
 }
 void aslZero(uint8_t address) {
 	uint8_t value = memory[address & 0xFF];
-	if ((value >> 7) & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if ((value >> 7) & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[address & 0xFF] = value << 1;
 	setZeroSignFlags(memory[address & 0xFF]);
 }
 void aslZeroX(uint8_t address) {
 	uint8_t value = memory[(address + X) & 0xFF];
-	if ((value >> 7) & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if ((value >> 7) & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[(address + X) & 0xFF] = value << 1;
 	setZeroSignFlags(memory[(address + X) & 0xFF]);
 }
 void aslAbs(uint16_t address) {
 	uint8_t value = memory[address];
-	if ((value >> 7) & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if ((value >> 7) & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[address] = value << 1;
 	setZeroSignFlags(memory[address]);
 }
 void aslAbsX(uint16_t address) {
 	uint8_t value = memory[(address + X) & 0xFFFF];
-	if ((value >> 7) & CARRY_FLAG) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if ((value >> 7) & CARRY_FLAG)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
 	memory[(address + X) & 0xFFFF] = value << 1;
 	setZeroSignFlags(memory[(address + X) & 0xFFFF]);
@@ -1483,14 +1568,20 @@ void andIndY(uint8_t address) {
  ============================================================================
  */
 void setAdcFlags(uint8_t A, uint8_t B, uint8_t result) {
-	if (result == 0) SR = SR | ZERO_FLAG;
-	else SR = SR & ~ZERO_FLAG;
+	if (result == 0)
+		SR = SR | ZERO_FLAG;
+	else
+		SR = SR & ~ZERO_FLAG;
 
-	if (result < A) SR = SR | CARRY_FLAG;
-	else SR = SR & ~CARRY_FLAG;
+	if (result < A)
+		SR = SR | CARRY_FLAG;
+	else
+		SR = SR & ~CARRY_FLAG;
 
-	if (result & 0x80) SR = SR | SIGN_FLAG;
-	else SR = SR & ~SIGN_FLAG;
+	if (result & 0x80)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & ~SIGN_FLAG;
 
 	setOverflow(A, B, result);
 }
@@ -1674,28 +1765,36 @@ void clv() {
  ============================================================================
  */
 void bcc(int8_t displacement) {
-	if ((SR & CARRY_FLAG) == 0) PC += displacement;
+	if ((SR & CARRY_FLAG) == 0)
+		PC += displacement;
 }
 void bcs(int8_t displacement) {
-	if (SR & CARRY_FLAG) PC += displacement;
+	if (SR & CARRY_FLAG)
+		PC += displacement;
 }
 void beq(int8_t displacement) {
-	if (SR & ZERO_FLAG) PC += displacement;
+	if (SR & ZERO_FLAG)
+		PC += displacement;
 }
 void bmi(int8_t displacement) {
-	if (SR & SIGN_FLAG) PC += displacement;
+	if (SR & SIGN_FLAG)
+		PC += displacement;
 }
 void bne(int8_t displacement) {
-	if ((SR & ZERO_FLAG) == 0) PC += displacement;
+	if ((SR & ZERO_FLAG) == 0)
+		PC += displacement;
 }
 void bpl(int8_t displacement) {
-	if ((SR & SIGN_FLAG) == 0) PC += displacement;
+	if ((SR & SIGN_FLAG) == 0)
+		PC += displacement;
 }
 void bvc(int8_t displacement) {
-	if ((SR & OVERFLOW_FLAG) == 0) PC += displacement;
+	if ((SR & OVERFLOW_FLAG) == 0)
+		PC += displacement;
 }
 void bvs(int8_t displacement) {
-	if (SR & OVERFLOW_FLAG) PC += displacement;
+	if (SR & OVERFLOW_FLAG)
+		PC += displacement;
 }
 /*
  ============================================================================
@@ -1711,22 +1810,28 @@ void dump() {
 	printf("SP:%.2X\n", SP & 0xFF);
 }
 void setZeroSignFlags(uint8_t reg) {
-	if (reg == 0) SR = SR | ZERO_FLAG;
-	else SR = SR & (~ZERO_FLAG);
+	if (reg == 0)
+		SR = SR | ZERO_FLAG;
+	else
+		SR = SR & (~ZERO_FLAG);
 
-	if (reg & 0x80) SR = SR | SIGN_FLAG;
-	else SR = SR & (~SIGN_FLAG);
+	if (reg & 0x80)
+		SR = SR | SIGN_FLAG;
+	else
+		SR = SR & (~SIGN_FLAG);
 }
 void setSbcOverflow(uint8_t one, uint8_t two, uint8_t result) {
 	SR = SR & ~OVERFLOW_FLAG;
 
-	if ((one & 0x80) != (two & 0x80) && (result & 0x80) == (two & 0x80)) SR = SR | OVERFLOW_FLAG;
+	if ((one & 0x80) != (two & 0x80) && (result & 0x80) == (two & 0x80))
+		SR = SR | OVERFLOW_FLAG;
 }
 
 void setOverflow(uint8_t one, uint8_t two, uint8_t result) {
 	SR = SR & ~OVERFLOW_FLAG;
 
-	if ((one & 0x80) == (two & 0x80) && (result & 0x80) != (one & 0x80)) SR = SR | OVERFLOW_FLAG;
+	if ((one & 0x80) == (two & 0x80) && (result & 0x80) != (one & 0x80))
+		SR = SR | OVERFLOW_FLAG;
 }
 uint16_t indXAddress(uint8_t address) {
 	uint16_t result = memory[(address + X) & 0xFF];

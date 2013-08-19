@@ -37,29 +37,24 @@ rom_t create_rom(char *filename) {
 
 	flags = fgetc(file);
 	rom.is_vs_system_cartridge = flags & 0x01;
-	;
 	rom.high_bits_mapper_type = (flags >> 4) & 0x07;
 
 	rom.prg_ram_size_in_bytes = fgetc(file);
-	if (rom.prg_ram_size_in_bytes == 0) rom.prg_ram_size_in_bytes = 1;
+	if (rom.prg_ram_size_in_bytes == 0)
+		rom.prg_ram_size_in_bytes = 1;
 
 	flags = fgetc(file);
 	rom.pal_or_ntsc = flags & 0x01;
 
 	rom.rom_banks = malloc(rom.prg_rom_size);
-	if (rom.rom_banks == NULL) {
-		printf("Failed to load ROM");
-		exit(1);
-	}
 	rom.vrom_banks = malloc(rom.vrom_size);
-	if (rom.vrom_banks == NULL) {
+
+	if (rom.vrom_banks == NULL || rom.rom_banks == NULL) {
 		printf("Failed to load ROM");
 		exit(1);
 	}
 
 	fseek(file, 16, 0);
-
-
 
 	for (int i = 0; i < rom.prg_rom_size; i++) {
 		rom.rom_banks[i] = fgetc(file);
@@ -68,6 +63,8 @@ rom_t create_rom(char *filename) {
 	for (int i = 0; i < rom.vrom_size; i++) {
 		rom.vrom_banks[i] = fgetc(file);
 	}
+
+	fclose(file);
 	return rom;
 }
 
